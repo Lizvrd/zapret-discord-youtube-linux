@@ -236,7 +236,7 @@ sudo ./zapret.sh stop                # остановить и убрать пр
 
 ## ⚖️Лицензирование
 
-Проект распространяется на условиях лицензии [MIT](https://github.com/Lizvrd/zapret-discord-youtube-linux/blob/main/LICENSE.txt)
+Проект распространяется на условиях лицензии [MIT](https://github.com/Lizvrd/zapret-discord-youtube-linux/blob/develop/LICENSE.txt)
 
 ## 🩷Благодарность участникам проекта
 

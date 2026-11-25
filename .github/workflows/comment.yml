@@ -16,7 +16,7 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            # Пожалуйста, ознакомьтесь с README. В нём есть ответы на частые вопросы и описания файлов: [README.md](https://github.com/Lizvrd/zapret-discord-youtube-linux/blob/main/README.md)
+            # Пожалуйста, ознакомьтесь с README. В нём есть ответы на частые вопросы и описания файлов: [README.md](https://github.com/Lizvrd/zapret-discord-youtube-linux/blob/develop/README.md)
 
             ### Прежде всего
             - Убедитесь, что `nfqws` установлен: `./zapret.sh --install-nfqws`
