@@ -15,6 +15,8 @@
 #   NFQWS=/путь/к/nfqws  QNUM=200  ZAPRET_LOG=/var/log/zapret-linux.log
 #   NFQWS_UID=uid[:gid]   под каким пользователем работает nfqws
 #                         (по умолчанию - владелец каталога lists/)
+#   GITHUB_TOKEN=...      поднять лимит GitHub API при --install-nfqws
+#                         (в CI и за общим NAT анонимный лимит 60 запросов/час)
 #
 
 ZAPRET_DIR=$(CDPATH='' cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/.." && pwd)
@@ -99,10 +101,17 @@ download_file() {
 }
 
 fetch_text() {
+    # GITHUB_TOKEN снимает лимит анонимных запросов к GitHub API (60/час).
+    local auth=()
+    [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$1"
+        curl -fsSL "${auth[@]}" "$1"
     elif command -v wget >/dev/null 2>&1; then
-        wget -qO- "$1"
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            wget -qO- --header="Authorization: Bearer $GITHUB_TOKEN" "$1"
+        else
+            wget -qO- "$1"
+        fi
     else
         die "нужен curl или wget"
     fi
