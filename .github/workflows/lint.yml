@@ -1,0 +1,95 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '**/*.sh'
+      - '.github/workflows/lint.yml'
+  pull_request:
+    paths:
+      - '**/*.sh'
+      - '.github/workflows/lint.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: shellcheck + bash -n
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          shellcheck --version
+
+      - name: shellcheck
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find . -name '*.sh' -not -path './.git/*' -print0)
+          printf 'Проверяю %d файлов\n' "${#files[@]}"
+          shellcheck --shell=bash "${files[@]}"
+
+      - name: bash -n
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find . -name '*.sh' -not -path './.git/*' -print0)
+          for f in "${files[@]}"; do
+            bash -n "$f"
+          done
+          printf 'Синтаксис в порядке: %d файлов\n' "${#files[@]}"
+
+  dry-run:
+    name: nfqws --dry-run (все стратегии)
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install firewall tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq curl iptables nftables
+
+      - name: Install nfqws
+        run: ./zapret.sh --install-nfqws
+
+      - name: Verify strategies
+        run: |
+          set -euo pipefail
+          mapfile -t strategies < <(./zapret.sh --list | awk '/^  [a-z0-9-]+[[:space:]]/{print $1}')
+          if [ "${#strategies[@]}" -eq 0 ]; then
+            echo "::error::zapret.sh --list не вернул ни одной стратегии"
+            exit 1
+          fi
+          printf 'Стратегий: %d\n\n' "${#strategies[@]}"
+
+          failed=0
+          for s in "${strategies[@]}"; do
+            echo "::group::$s"
+            if ./zapret.sh --dry-run "$s"; then
+              echo "OK: $s"
+            else
+              echo "::error::стратегия $s не прошла nfqws --dry-run"
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::$failed из ${#strategies[@]} стратегий провалили проверку"
+            exit 1
+          fi
+          echo "Все ${#strategies[@]} стратегий приняты nfqws"

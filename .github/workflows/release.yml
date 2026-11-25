@@ -4,66 +4,78 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag'
+        description: 'Release tag (должен совпадать с .service/version.txt)'
         required: true
+
+permissions:
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    env:
+      TAG: ${{ github.event.inputs.tag }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify version matches version.txt
+      - name: Verify version matches .service/version.txt
         run: |
-          VERSION=$(cat .service/version.txt)
-          if [ "$VERSION" != "${{ github.event.inputs.tag }}" ]; then
-            echo "Error: tag '${{ github.event.inputs.tag }}' does not match .service/version.txt ('$VERSION')"
+          set -euo pipefail
+          version=$(tr -d '[:space:]' < .service/version.txt)
+          if [ "$version" != "$TAG" ]; then
+            echo "::error::тег '$TAG' не совпадает с .service/version.txt ('$version')"
             exit 1
           fi
 
       - name: Install tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y zip tar rar
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zip
 
       - name: Prepare release bundle
         run: |
-          NAME="zapret-discord-youtube-${{ github.event.inputs.tag }}"
+          set -euo pipefail
+          name="zapret-discord-youtube-linux-$TAG"
 
-          mkdir "$NAME"
+          mkdir -p "$name"
+          cp ./*.sh "$name/"
+          cp -r lib lists utils "$name/"
+          cp -r bin "$name/"
+          # nfqws не кладём в архив: он скачивается отдельно (./zapret.sh --install-nfqws)
+          rm -f "$name/bin/nfqws"
+          # Windows-версия тестировщика не нужна в Linux-сборке
+          rm -f "$name/utils/test zapret.ps1"
+          cp LICENSE.txt README.md "$name/"
+          install -Dm644 .service/version.txt "$name/.service/version.txt"
 
-          cp -r bin "$NAME/"
-          cp -r lists "$NAME/"
-          cp -r utils "$NAME/"
-          cp *.bat "$NAME/"
-
-      - name: Create archives
-        run: |
-          NAME="zapret-discord-youtube-${{ github.event.inputs.tag }}"
-
-          zip -qr "${NAME}.zip" "$NAME"
-          rar a -idq "${NAME}.rar" "$NAME"
-          tar --owner=0 --group=0 -czf "${NAME}.tar.gz" "$NAME"
-
-      - name: Print SHA256 checksums
-        run: |
-          NAME="zapret-discord-youtube-${{ github.event.inputs.tag }}"
-
-          sha256sum \
-            "${NAME}.zip" \
-            "${NAME}.rar" \
-            "${NAME}.tar.gz"
+          tar --owner=0 --group=0 --numeric-owner -czf "${name}.tar.gz" "$name"
+          zip -qr "${name}.zip" "$name"
+          sha256sum "${name}.tar.gz" "${name}.zip" > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag }}
           name: ${{ github.event.inputs.tag }}
+          fail_on_unmatched_files: true
+          body: |
+            ## zapret-discord-youtube (Linux) ${{ github.event.inputs.tag }}
+
+            Linux-порт стратегий [zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube):
+            `nfqws` + NFQUEUE вместо `winws.exe` + WinDivert.
+
+            ### Установка
+            1. Распакуйте архив в путь без кириллицы и спецсимволов.
+            2. Скачайте `nfqws` (с проверкой sha256): `./zapret.sh --install-nfqws`
+            3. Список стратегий: `./zapret.sh list`; запуск: `sudo ./general.sh`
+            4. Автозапуск: `sudo ./service.sh install general`
+            5. Прогон всех стратегий: `sudo ./zapret-test.sh`
+
+            Требуются `root`, `iptables` или `nftables`, `curl`. Лог: `/var/log/zapret-linux.log`.
           files: |
-            zapret-discord-youtube-${{ github.event.inputs.tag }}.zip
-            zapret-discord-youtube-${{ github.event.inputs.tag }}.rar
-            zapret-discord-youtube-${{ github.event.inputs.tag }}.tar.gz
+            zapret-discord-youtube-linux-${{ github.event.inputs.tag }}.tar.gz
+            zapret-discord-youtube-linux-${{ github.event.inputs.tag }}.zip
+            SHA256SUMS
