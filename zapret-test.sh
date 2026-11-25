@@ -26,7 +26,7 @@
 #
 set -u
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)
 SELF=$(readlink -f -- "$0")
 ZAPRET="$SCRIPT_DIR/zapret.sh"
 TARGETS_FILE="${TEST_TARGETS:-$SCRIPT_DIR/utils/targets.txt}"

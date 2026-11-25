@@ -11,7 +11,7 @@
 #
 set -u
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)
 . "$SCRIPT_DIR/lib/zapret-lib.sh"
 
 UNIT_PATH="${ZAPRET_UNIT_PATH:-/etc/systemd/system/$UNIT_NAME.service}"

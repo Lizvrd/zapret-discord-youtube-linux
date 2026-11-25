@@ -10,7 +10,7 @@
 #
 set -u
 
-. "$(CDPATH= cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)/lib/zapret-lib.sh"
+. "$(CDPATH='' cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)/lib/zapret-lib.sh"
 
 STRATEGY_NAME="fake-tls-auto-alt3"
 NFQWS_ARGS=(

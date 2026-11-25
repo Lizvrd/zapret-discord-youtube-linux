@@ -17,8 +17,7 @@
 #                         (по умолчанию - владелец каталога lists/)
 #
 
-ZAPRET_DIR=$(CDPATH= cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/.." && pwd)
-SCRIPT_DIR="$ZAPRET_DIR"
+ZAPRET_DIR=$(CDPATH='' cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/.." && pwd)
 BIN="$ZAPRET_DIR/bin/"
 LISTS="$ZAPRET_DIR/lists/"
 UTILS="$ZAPRET_DIR/utils/"
@@ -385,7 +384,7 @@ stop_zapret() {
 }
 
 start_zapret() {
-    local pid i
+    local pid
 
     prepare
 
@@ -409,7 +408,7 @@ start_zapret() {
     echo "$pid" >"$PIDFILE"
     echo "$STRATEGY_NAME" >"$STATEFILE"
 
-    for i in 1 2 3 4 5; do
+    for _ in 1 2 3 4 5; do
         sleep 0.2
         kill -0 "$pid" 2>/dev/null || break
     done
